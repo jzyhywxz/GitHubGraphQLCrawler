@@ -70,8 +70,8 @@ public class GGLogManager {
         while ((line = reader.readLine()) != null) {
             String content = line.substring(35);
             if (content.startsWith("[CACHE] ") || content.startsWith("[QUEUE] ")) {
-                String json = content.substring(8);
-                typeIdBeans.add(MetaTemplate.TypeIdBean.fromJson(json));
+                String s = content.substring(8);
+                typeIdBeans.add(MetaTemplate.TypeIdBean.deserialize(s));
             }
         }
         reader.close();
@@ -91,7 +91,7 @@ public class GGLogManager {
         String line;
         while ((line = reader.readLine()) != null) {
             String content = line.substring(35);
-            errors.add(MetaTemplate.GGError.fromJson(content));
+            errors.add(MetaTemplate.GGError.deserialize(content));
         }
         reader.close();
 
