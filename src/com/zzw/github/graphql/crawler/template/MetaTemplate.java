@@ -497,7 +497,7 @@ public class MetaTemplate {
 
         @Override
         public String toString() {
-            return toJson();
+            return serialize();
         }
 
         @Override
@@ -520,12 +520,27 @@ public class MetaTemplate {
             return true;
         }
 
-        public String toJson() {
-            return new Gson().toJson(this);
+        public String serialize() {
+            return type.getName() + "/" + id;
         }
 
-        public static TypeIdBean fromJson(String json) {
-            return new Gson().fromJson(json, TypeIdBean.class);
+        public static TypeIdBean deserialize(String s) {
+            if (s == null) {
+                return null;
+            }
+            String[] info = s.split("/");
+            if ((info == null) || (info.length < 2)) {
+                return null;
+            }
+
+            try {
+                Class aType = Class.forName(info[0]);
+                String aId = info[1];
+                return new TypeIdBean(aType, aId);
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
     }
 
@@ -554,14 +569,14 @@ public class MetaTemplate {
 
         @Override
         public String toString() {
-            return toJson();
+            return serialize();
         }
 
-        public String toJson() {
+        public String serialize() {
             return new Gson().toJson(this);
         }
 
-        public static GGError fromJson(String json) {
+        public static GGError deserialize(String json) {
             return new Gson().fromJson(json, GGError.class);
         }
     }
