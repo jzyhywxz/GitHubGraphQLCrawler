@@ -43,7 +43,7 @@ public class GGTaskManager {
                     }
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+//                e.printStackTrace();
                 setIsInterrupted(true);
             }
         }

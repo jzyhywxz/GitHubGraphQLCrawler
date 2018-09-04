@@ -80,7 +80,7 @@ public class GGSearchor {
         }
         if (MetaTemplate.isAnyErrorOccurred(result)) {
             MetaTemplate.GGError e = new MetaTemplate.GGError("FIRST_SEARCH", payload, result);
-            mContext.getLogManager().error(e.toJson());
+            mContext.getLogManager().error(e.serialize());
             List<String> errorTypes = MetaTemplate.getErrorType(result);
             if ((errorTypes != null) && errorTypes.contains("RATE_LIMITED")) {
                 mContext.stop();
@@ -112,7 +112,7 @@ public class GGSearchor {
         }
         if (MetaTemplate.isAnyErrorOccurred(result)) {
             MetaTemplate.GGError e = new MetaTemplate.GGError("AFTER_SEARCH", payload, result);
-            mContext.getLogManager().error(e.toJson());
+            mContext.getLogManager().error(e.serialize());
             List<String> errorTypes = MetaTemplate.getErrorType(result);
             if ((errorTypes != null) && errorTypes.contains("RATE_LIMITED")) {
                 mContext.stop();

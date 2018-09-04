@@ -40,11 +40,11 @@ public class GGContext {
         taskManager.stop();
         Set<MetaTemplate.TypeIdBean> recordCacheSnapshot = cacheManager.getRecordCacheSnapshot();
         for (MetaTemplate.TypeIdBean typeIdBean : recordCacheSnapshot) {
-            logManager.info("[CACHE] " + typeIdBean.toJson());
+            logManager.info("[CACHE] " + typeIdBean.serialize());
         }
         Set<MetaTemplate.TypeIdBean> taskQueueSnapshot = taskManager.getTaskQueueSnapshot();
         for (MetaTemplate.TypeIdBean typeIdBean : taskQueueSnapshot) {
-            logManager.info("[QUEUE] " + typeIdBean.toJson());
+            logManager.info("[QUEUE] " + typeIdBean.serialize());
         }
         logManager.info("[STOP] application");
         logManager.close();
