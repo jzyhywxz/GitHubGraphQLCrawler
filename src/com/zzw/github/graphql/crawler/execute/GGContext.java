@@ -2,6 +2,7 @@ package com.zzw.github.graphql.crawler.execute;
 
 import com.zzw.github.graphql.crawler.template.MetaTemplate;
 import com.zzw.github.graphql.network.GGClient;
+import com.zzw.tools.io.OkTextReader;
 
 import java.util.Set;
 
@@ -70,7 +71,10 @@ public class GGContext {
 
     public static GGClient getConnector() {
         String rootEndPoint = "https://api.github.com/graphql";
-        String accessToken = "24c7963d1bea8a280869514fb02e4be0fc95038f";
+        OkTextReader reader = new OkTextReader();
+        reader.open("F:\\JetBrains\\IntelliJIdea\\access_token.txt");
+        String accessToken = reader.readLine();
+        reader.close();
         return new GGClient(rootEndPoint, accessToken);
     }
 }
