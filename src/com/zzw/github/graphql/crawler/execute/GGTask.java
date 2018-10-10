@@ -2,7 +2,9 @@ package com.zzw.github.graphql.crawler.execute;
 
 import com.zzw.github.graphql.crawler.template.MetaTemplate;
 import com.zzw.github.graphql.network.GGClient;
+import com.zzw.github.graphql.schema.objects.Repository;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -18,7 +20,7 @@ public class GGTask implements Runnable {
     private String id;
 
     public GGTask(GGContext context, Class type, String id) {
-        this.mConnector = GGContext.getConnector();
+        this.mConnector = context.getConnector();
         this.mContext = context;
         this.type = type;
         this.id = id;
@@ -30,8 +32,9 @@ public class GGTask implements Runnable {
 
     @Override
     public void run() {
+        MetaTemplate.TypeIdBean typeIdBean = getTypeIdBean();
         // acquire
-        mContext.getCacheManager().addRecordIntoCache(type, id);
+        mContext.getCacheManager().addRecordIntoCache(typeIdBean);
 
         List<String> results = new ArrayList<>();
 
@@ -55,10 +58,22 @@ public class GGTask implements Runnable {
         // write to disk
         if (results.size() > 0) {
             mContext.getDiskManager().writeIntoDisk(type.getSimpleName(), id, results);
+            String path = mContext.getRootPath() + File.separator +
+                    type.getSimpleName() + File.separator + id + ".json";
+            System.out.printf("%2d (%4d/%d) finished -> %s\n",
+                    Thread.currentThread().getId(),
+                    mContext.getCompletedTaskNum(),
+                    mContext.getTotalTaskNum(),
+                    path);
         }
 
         // release
-        mContext.getCacheManager().removeRecordFromCache(type, id);
+        mContext.getCacheManager().removeRecordFromCache(typeIdBean);
+
+        mContext.completeTask();
+        if (mContext.getCompletedTaskNum() >= mContext.getTotalTaskNum()) {
+            mContext.stop();
+        }
     }
 
     private String doInfoQuery() {
@@ -84,8 +99,7 @@ public class GGTask implements Runnable {
         if (MetaTemplate.isAnyErrorOccurred(result)) {
             MetaTemplate.GGError e = new MetaTemplate.GGError("INFO", payload, result);
             mContext.getLogManager().error(e.serialize());
-            List<String> errorTypes = MetaTemplate.getErrorType(result);
-            if ((errorTypes != null) && errorTypes.contains("RATE_LIMITED")) {
+            if (MetaTemplate.isRateLimitError(result)) {
                 mContext.stop();
             }
             return null;
@@ -145,7 +159,7 @@ public class GGTask implements Runnable {
             mConnector.connect(payload, true);
             result = mConnector.result();
         } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
         } finally {
             mConnector.disconnect();
         }
@@ -153,8 +167,7 @@ public class GGTask implements Runnable {
         if (MetaTemplate.isAnyErrorOccurred(result)) {
             MetaTemplate.GGError e = new MetaTemplate.GGError("FIRST_CONN", payload, result);
             mContext.getLogManager().error(e.serialize());
-            List<String> errorTypes = MetaTemplate.getErrorType(result);
-            if ((errorTypes != null) && errorTypes.contains("RATE_LIMITED")) {
+            if (MetaTemplate.isRateLimitError(result)) {
                 mContext.stop();
             }
             return null;
@@ -181,7 +194,7 @@ public class GGTask implements Runnable {
             mConnector.connect(payload, true);
             result = mConnector.result();
         } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
         } finally {
             mConnector.disconnect();
         }
@@ -189,8 +202,7 @@ public class GGTask implements Runnable {
         if (MetaTemplate.isAnyErrorOccurred(result)) {
             MetaTemplate.GGError e = new MetaTemplate.GGError("AFTER_CONN", payload, result);
             mContext.getLogManager().error(e.serialize());
-            List<String> errorTypes = MetaTemplate.getErrorType(result);
-            if ((errorTypes != null) && errorTypes.contains("RATE_LIMITED")) {
+            if (MetaTemplate.isRateLimitError(result)) {
                 mContext.stop();
             }
             return null;
@@ -220,7 +232,11 @@ public class GGTask implements Runnable {
                 continue;
             }
 //            System.out.println(typeIdBean);
-            mContext.getTaskManager().addTaskIntoQueue(new GGTask(mContext, type, id));
+            if (this.type == Repository.class) {
+                mContext.getTaskManager().addTaskIntoQueue(new GGTask(mContext, type, id), true);
+            } else {
+                mContext.getTaskManager().addTaskIntoQueue(new GGTask(mContext, type, id), false);
+            }
         }
     }
 }

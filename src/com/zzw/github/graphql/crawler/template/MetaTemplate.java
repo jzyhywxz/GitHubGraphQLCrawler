@@ -4,7 +4,8 @@ import com.google.gson.Gson;
 import com.zzw.github.graphql.builder.TypeUtil;
 import com.zzw.github.graphql.parser.GGParser;
 import com.zzw.github.graphql.schema.Error;
-import com.zzw.github.graphql.schema.query.QueryEntry;
+import com.zzw.github.graphql.schema.queries.Query;
+import com.zzw.github.graphql.schema.queries.QueryEntry;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -73,42 +74,58 @@ public class MetaTemplate {
         if (result == null) {
             return true;
         }
+
         QueryEntry entry = GGParser.fromJson(result, QueryEntry.class);
-        Object[] errors = GGParser.get(entry, QueryEntry.class, "errors");
-        if ((errors == null) || (errors.length < 2)) {
-            return false;
+        Object[] data = GGParser.get(entry, QueryEntry.class, "data");
+        if ((data == null) || data.length < 2) {
+            return true;
         }
-        Error[] errorsValue = (Error[]) errors[1];
-        return ((errorsValue != null) && (errorsValue.length > 0));
+        Query query = (Query) data[1];
+        return query == null;
+
+//        Object[] errors = GGParser.get(entry, QueryEntry.class, "errors");
+//        if ((errors == null) || (errors.length < 2)) {
+//            return false;
+//        }
+//        Error[] errorsValue = (Error[]) errors[1];
+//        return ((errorsValue != null) && (errorsValue.length > 0));
     }
 
-    public static List<String> getErrorType(String result) {
+    public static boolean isRateLimitError(String result) {
         if (result == null) {
-            return null;
+            return false;
         }
+
         QueryEntry entry = GGParser.fromJson(result, QueryEntry.class);
+
+        Object[] message = GGParser.get(entry, QueryEntry.class, "message");
+        if ((message != null) && (message.length >= 2)) {
+            String messageValue = (String) message[1];
+            if (messageValue != null && "You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.".equals(messageValue)) {
+                return true;
+            }
+        }
+
         Object[] errors = GGParser.get(entry, QueryEntry.class, "errors");
-        if ((errors == null) || (errors.length < 2)) {
-            return null;
+        if ((errors != null) && (errors.length >= 2)) {
+            Error[] errorsValue = (Error[]) errors[1];
+            if ((errorsValue != null) && (errorsValue.length >= 2)) {
+                for (Error error : errorsValue) {
+                    if (error == null) {
+                        continue;
+                    }
+                    String errorType = error.getType();
+                    if (errorType == null) {
+                        continue;
+                    }
+                    if ("RATE_LIMITED".equals(errorType)) {
+                        return true;
+                    }
+                }
+            }
         }
 
-        Error[] errorsValue = (Error[]) errors[1];
-        if ((errorsValue == null) || (errorsValue.length < 0)) {
-            return null;
-        }
-
-        List<String> errorTypes = new ArrayList<>();
-        for (Error error : errorsValue) {
-            if (error == null) {
-                continue;
-            }
-            String errorType = error.getType();
-            if (errorType == null) {
-                continue;
-            }
-            errorTypes.add(errorType);
-        }
-        return errorTypes;
+        return false;
     }
 
     public static int getTotalCount(String result, String connField) {
@@ -578,6 +595,65 @@ public class MetaTemplate {
 
         public static GGError deserialize(String json) {
             return new Gson().fromJson(json, GGError.class);
+        }
+
+        public static Error[] getErrors(String json) {
+            if (json == null) {
+                return null;
+            }
+            QueryEntry entry = GGParser.fromJson(json, QueryEntry.class);
+            if (entry == null) {
+                return null;
+            }
+            return entry.getErrors();
+        }
+
+        public static List<String> getErrorTypes(Error[] errors) {
+            if (errors == null || errors.length <= 0) {
+                return null;
+            }
+            List<String> types = new ArrayList<>();
+            for (Error error : errors) {
+                String type = error.getType();
+                if (type != null) {
+                    types.add(type);
+                }
+            }
+            return types;
+        }
+
+        public static List<String> getErrorMassages(Error[] errors) {
+            if (errors == null || errors.length <= 0) {
+                return null;
+            }
+            List<String> massages = new ArrayList<>();
+            for (Error error : errors) {
+                String massage = error.getMessage();
+                if (massage != null) {
+                    massages.add(massage);
+                }
+            }
+            return massages;
+        }
+
+        public static boolean isIgnorableErrorType(List<String> types) {
+            if (types == null || types.isEmpty()) {
+                return false;
+            }
+            if (types.size() == 1 && types.get(0).equals("FORBIDDEN")) {
+                return true;
+            }
+            return false;
+        }
+
+        public static boolean isIgnorableErrorMassage(List<String> massages) {
+            if (massages == null || massages.isEmpty()) {
+                return false;
+            }
+            if (massages.size() == 1 && massages.get(0).contains("doesn't exist on type")) {
+                return true;
+            }
+            return false;
         }
     }
 }

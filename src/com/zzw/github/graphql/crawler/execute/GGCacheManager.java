@@ -21,26 +21,28 @@ public class GGCacheManager {
     }
 
     public synchronized boolean isRecordExistedInCache(Class type, String id) {
-        if ((type == null) || (id == null)) {
+        if ((type == null) || (id == null) || mRecordCache.isEmpty()) {
             return false;
         }
-        MetaTemplate.TypeIdBean typeIdBean = new MetaTemplate.TypeIdBean(type, id);
-        return mRecordCache.contains(typeIdBean);
+        for (MetaTemplate.TypeIdBean typeIdBean : mRecordCache) {
+            if (type.getName().equals(typeIdBean.getType().getName()) &&
+                    id.equals(typeIdBean.getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public synchronized void addRecordIntoCache(Class type, String id) {
-        if ((type == null) || (id == null)) {
-            return;
+    public synchronized void addRecordIntoCache(MetaTemplate.TypeIdBean typeIdBean) {
+        if (typeIdBean != null) {
+            mRecordCache.add(typeIdBean);
         }
-        MetaTemplate.TypeIdBean typeIdBean = new MetaTemplate.TypeIdBean(type, id);
-        mRecordCache.add(typeIdBean);
     }
 
-    public synchronized void removeRecordFromCache(Class type, String id) {
-        if ((type == null) || (id == null)) {
+    public synchronized void removeRecordFromCache(MetaTemplate.TypeIdBean typeIdBean) {
+        if ((typeIdBean == null) || mRecordCache.isEmpty()) {
             return;
         }
-        MetaTemplate.TypeIdBean typeIdBean = new MetaTemplate.TypeIdBean(type, id);
         mRecordCache.remove(typeIdBean);
     }
 }

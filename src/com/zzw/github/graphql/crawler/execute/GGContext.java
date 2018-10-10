@@ -2,7 +2,6 @@ package com.zzw.github.graphql.crawler.execute;
 
 import com.zzw.github.graphql.crawler.template.MetaTemplate;
 import com.zzw.github.graphql.network.GGClient;
-import com.zzw.tools.io.OkTextReader;
 
 import java.util.Set;
 
@@ -10,17 +9,24 @@ import java.util.Set;
  * Created by zzw on 2018/8/31.
  */
 public class GGContext {
+    private String accessToken;
+    private String rootPath;
     private GGCacheManager cacheManager;
     private GGDiskManager diskManager;
     private GGLogManager logManager;
     private GGTaskManager taskManager;
     private boolean isRunning;
+    private int totalTaskNum = 0;
+    private int completedTaskNum = 0;
 
-    public GGContext(String rootPath) {
-        cacheManager = new GGCacheManager();
-        diskManager = new GGDiskManager(rootPath);
-        logManager = new GGLogManager(rootPath);
-        taskManager = new GGTaskManager();
+    public GGContext(String accessToken, String rootPath) {
+        this.accessToken = accessToken;
+        this.rootPath = rootPath;
+        this.cacheManager = new GGCacheManager();
+        this.diskManager = new GGDiskManager(this, rootPath);
+        this.logManager = new GGLogManager(rootPath);
+        this.taskManager = new GGTaskManager(this);
+        this.isRunning = false;
     }
 
     public synchronized void start() {
@@ -50,8 +56,21 @@ public class GGContext {
         logManager.close();
         isRunning = false;
 
+        System.out.println("Application is finished");
         System.exit(0);
     }
+
+    @Override
+    protected void finalize() {
+        stop();
+    }
+
+    public synchronized void addNewTask() { ++totalTaskNum; }
+    public synchronized void completeTask() { ++completedTaskNum; }
+    public synchronized int getTotalTaskNum() { return totalTaskNum; }
+    public synchronized int getCompletedTaskNum() { return completedTaskNum; }
+
+    public String getRootPath() { return rootPath; }
 
     public GGCacheManager getCacheManager() {
         return cacheManager;
@@ -69,12 +88,7 @@ public class GGContext {
         return taskManager;
     }
 
-    public static GGClient getConnector() {
-        String rootEndPoint = "https://api.github.com/graphql";
-        OkTextReader reader = new OkTextReader();
-        reader.open("F:\\JetBrains\\IntelliJIdea\\access_token.txt");
-        String accessToken = reader.readLine();
-        reader.close();
-        return new GGClient(rootEndPoint, accessToken);
+    public synchronized GGClient getConnector() {
+        return new GGClient("https://api.github.com/graphql", accessToken);
     }
 }

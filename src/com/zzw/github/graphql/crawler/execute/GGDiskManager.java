@@ -11,13 +11,15 @@ import java.util.List;
  */
 public class GGDiskManager {
     private String mRootPath;
+    private GGContext mContext;
     private LinkedList<OkTextWriter> mWriterPool = new LinkedList<>();
 
-    public GGDiskManager(String rootPath) {
-        this(rootPath, 10);
+    public GGDiskManager(GGContext context, String rootPath) {
+        this(context, rootPath, 10);
     }
 
-    public GGDiskManager(String rootPath, int initNum) {
+    public GGDiskManager(GGContext context, String rootPath, int initNum) {
+        mContext = context;
         mRootPath = rootPath;
         for (int i = 0; i < initNum; i++) {
             mWriterPool.addLast(new OkTextWriter());
@@ -41,19 +43,11 @@ public class GGDiskManager {
         String path = mRootPath + File.separator + typeName + File.separator + id + ".json";
 
         OkTextWriter writer = takeOutWriter();
-        System.out.printf("[thread:%d/writer:%d] starting -> %s\n",
-                Thread.currentThread().getId(),
-                writer.hashCode(),
-                path);
         writer.open(path);
         for (String result : results) {
             writer.println(result);
         }
         writer.close();
-        System.out.printf("[thread:%d/writer:%d] finished -> %s\n",
-                Thread.currentThread().getId(),
-                writer.hashCode(),
-                path);
         putBackWriter(writer);
     }
 

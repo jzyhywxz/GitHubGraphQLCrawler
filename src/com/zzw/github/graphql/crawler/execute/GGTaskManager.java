@@ -8,22 +8,25 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by zzw on 2018/8/31.
  */
 public class GGTaskManager {
+    private GGContext mContext;
     private LinkedList<GGTask> mTaskQueue;
     private Semaphore mTaskSemaphore;
     private ExecutorService mExecutor;
     private Thread mTaskThread;
     private boolean mIsInterrupted;
 
-    public GGTaskManager() {
-        this(10);
+    public GGTaskManager(GGContext context) {
+        this(context, 10);
     }
 
-    public GGTaskManager(int nThreads) {
+    public GGTaskManager(GGContext context, int nThreads) {
+        mContext = context;
         mTaskQueue = new LinkedList<>();
         mTaskSemaphore = new Semaphore(0);
         mExecutor = Executors.newFixedThreadPool(nThreads);
@@ -37,10 +40,15 @@ public class GGTaskManager {
             try {
                 while (!isInterrupted()) {
                     mTaskSemaphore.acquire();
-                    Runnable task = removeTaskFromQueue();
+                    GGTask task = removeTaskFromQueue();
                     if (task != null) {
                         mExecutor.execute(task);
                     }
+
+//                    int size = mContext.getCacheManager().getRecordCacheSize() + getTaskQueueSize();
+//                    if (size <= 0) {
+//                        mContext.stop();
+//                    }
                 }
             } catch (InterruptedException e) {
 //                e.printStackTrace();
@@ -67,9 +75,14 @@ public class GGTaskManager {
         return snapshot;
     }
 
-    public synchronized void addTaskIntoQueue(GGTask task) {
+    public synchronized void addTaskIntoQueue(GGTask task, boolean first) {
         if ((!getIsInterrupted()) && (task != null)) {
-            mTaskQueue.addLast(task);
+            if (first) {
+                mTaskQueue.addFirst(task);
+            } else {
+                mTaskQueue.addLast(task);
+            }
+            mContext.addNewTask();
             mTaskSemaphore.release();
 //            System.out.println("add task into queue");
         }

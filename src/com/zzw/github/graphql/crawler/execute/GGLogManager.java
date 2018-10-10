@@ -97,4 +97,33 @@ public class GGLogManager {
 
         return errors;
     }
+
+    public static List<MetaTemplate.TypeIdBean> parseRetryLog(String path) {
+        if (path == null) {
+            return null;
+        }
+
+        List<MetaTemplate.TypeIdBean> typeIdBeans = new ArrayList<>();
+
+        OkTextReader reader = new OkTextReader();
+        reader.open(path);
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] info = line.split(" ");
+            if (info == null || info.length < 2) {
+                continue;
+            }
+            try {
+                Class type = Class.forName(info[0]);
+                String id = info[1];
+                MetaTemplate.TypeIdBean typeIdBean = new MetaTemplate.TypeIdBean(type, id);
+                typeIdBeans.add(typeIdBean);
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        reader.close();
+
+        return typeIdBeans;
+    }
 }
